@@ -101,7 +101,13 @@ def fit_nn_model(X, y, model_name):
     y_pred = model.predict(X).flatten()
     return model, y_pred, history
 
+# Set random seeds for reproducibility
+random.seed(42)
+np.random.seed(42) 
+tf.random.set_seed(42)
+
 st.title("Federal Funds Rate Regression Modeling Dashboard")
+
 with st.expander("Introduction"):
     st.markdown("""
     In this project we will construct models for the Federal Funds Effective Rate. 
@@ -117,12 +123,12 @@ with st.expander("Introduction"):
     improve the performance of regression models in predicting the Federal Funds Effective Rate. We choose to build off the Taylor Model as this is the foundational model 
     and Karakas (2023) found little difference in performance between this model and their model.
 
-    We will also check the assumptions of regression for each model.
+    We will also check the assumptions of regression for each model. We will also construct simple Neural Network Models for the regression equations.
 
-    Possible stakeholders for this project include policy makers, economists,investors, and lending institutions.
+    Possible stakeholders for this project include policy makers, economists, investors, and lending institutions.
     """)
 
-tabs = st.tabs(["Data Cleaning", "Data Exploration", "Models", "Model Assumptions", "Model Comparison", "Neural Network Modeling", "Conclusion", "References"])
+tabs = st.tabs(["Data Cleaning", "Data Exploration", "Models", "Regression Assumptions", "OLS Model Results", "NN Model Results", "Conclusion", "References"])
 
 # Define a dictionary with datasets and their URLs
 datasets = {
@@ -136,16 +142,17 @@ datasets = {
     "unrate": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/UNRATE.csv"
 }
 
+# Data Cleaning Tab
 with tabs[0]:
     st.header("Data Cleaning")
 
-    with st.expander("Data Load Check"):
-        # Iterate and load datasets
-        for name, url in datasets.items():
-            globals()[name] = pd.read_csv(url, parse_dates=["observation_date"])
-            st.write(f"{name} dataset loaded successfully.")
+    # Iterate and load datasets
+    for name, url in datasets.items():
+        globals()[name] = pd.read_csv(url, parse_dates=["observation_date"])
+            
+    st.write("All datasets loaded successfully.")
 
-    with st.expander("Data Missing Value and Duplicate Row Check"):
+    with st.expander("Data Missing Value and Duplicate Row Check (After Loading)"):
         # Iterate through the dataset names in the dictionary
         for name in datasets.keys():
             # Access the DataFrame using globals()
@@ -250,8 +257,6 @@ with tabs[0]:
     st.write("Outliers have been capped with Winsorization.")
     st.write(f"Winsor Limits: {winsor_limits}")
 
-with tabs[1]:
-    st.header("Exploratory Data Analysis")
     # Convert df.dtypes to a DataFrame for better display
     df_dtypes_table = df.dtypes.astype(str).reset_index()
     df_dtypes_table.columns = ["Column Name", "Data Type"]
@@ -259,16 +264,39 @@ with tabs[1]:
     # Display the DataFrame
     st.subheader("Data types")
     st.dataframe(df_dtypes_table)
-    st.markdown("The data is entirely in float64 with data types consistent across feature. This type is perfect for our models.")
+    st.markdown("The data is entirely in float64 with data types consistent across features. This type is perfect for our models and does not require any further action.")
+
+# EDA Tab
+with tabs[1]:
+    st.header("Exploratory Data Analysis")
 
     # Print the data table
     st.subheader("Data Table")
     st.dataframe(df)
-    st.markdown("""
-    Federal Funds Rate, Inflation, Unemployment, Target, Inflation Gap, Inflation Lag, and Output Gap Lag % are percentage rates.
 
-    Output Gap is a numerical value in billions of dollars.
-    """)
+    # Detailed Information of Features in Data
+    with st.expander("Data Feature Information"):
+        st.markdown("""
+        Federal Funds Rate, Inflation, Unemployment, Target, Inflation Gap, Inflation Lag, and Output Gap Lag % are percentage rates.
+
+        Output Gap is a numerical value in billions of dollars.
+
+        - **Federal Funds Rate**: The interest rate that banks use when lending to each other overnight. This is determined by the market.
+
+        - **Inflation**: The percentage rate at which prices increase.
+
+        - **Unemployment**: The ratio of people without jobs to the total labor force.
+
+        - **Target**: The Federal Funds Rate that the Federal Reserve wants to set as part of economic and monetary policy.
+
+        - **Inflation Gap**: The difference between Inflation and the Inflation Target (the Inflation Target is treated as a constant 2% in this project).
+
+        - **Output Gap**: The difference between Real and Potential Gross Domestic Product (GDP). Measures the difference between how many goods and services a country produces each year vs how much it can produce in theory when using all available resources.
+
+        - **Inflation Lag**: The 1st lagged values of Inflation.
+
+        - **Output Gap Lag %**: The 1st lagged percentage of Output Gap.
+        """)
 
     # Compute Summary Statistics
     st.subheader("Summary Statistics")
@@ -280,7 +308,7 @@ with tabs[1]:
     with st.expander("Line Plots of Features Over Time"):
         # Plot selected variable over time
         fig, ax = plt.subplots()
-        sns.lineplot(data=df, x=df.index, y=df[column], ax=ax)
+        sns.lineplot(data=df, x=df.index, y=df[column], ax=ax, color="dodgerblue")
         ax.set_title(f"{column} over time")
         st.pyplot(fig)
 
@@ -294,7 +322,7 @@ with tabs[1]:
     with st.expander("Distribution Plots"):
         # Plot the distribution of the selected variable
         fig, ax = plt.subplots(figsize=(10, 5))
-        sns.histplot(df[column], kde=True, ax=ax)
+        sns.histplot(df[column], kde=True, ax=ax, color="dodgerblue")
         ax.set_title(f"Distribution of {column}")
         ax.set_xlabel(column)
         ax.set_ylabel("Frequency")
@@ -310,7 +338,7 @@ with tabs[1]:
         sns.heatmap(
             df.corr(),
             annot=True,
-            cmap="coolwarm",
+            cmap="cividis",
             fmt=".2f",
             linewidths=0.5,
         )
@@ -319,20 +347,23 @@ with tabs[1]:
         st.pyplot(fig2)
 
         # Notes
-        st.markdown("""
+        st.markdown("""     
         Inflation, Inflation Gap, and Inflation Lag are perfectly correlated to each other, 
-        while Output Gap and Output Gap Lag (%) are very strongly correlated, which is expected. 
-        We will not be trying any models that use more than one in each set as predictors at a time.
+        while Output Gap and Output Gap Lag are very strongly correlated, 
+        which is expected since they are the base and derived features. We will not be trying 
+        any models that use more than one in each set as predictors at a time, so this will not be an issue.
 
         Unemployment and Output Gap are strongly correlated, so we will need to watch out for these 
         when checking the Variance Inflation Factors (VIFs) for multicollinearity issues.
-
-        Target is highly correlated with our dependent variable, Federal Funds Rate, and we expect it 
-        to have the biggest impact on predictive performance of the model. Other features generally 
-        have between 40% and 50% correlation with the dependent variable, which is moderate. 
-        Unemployment has almost 0 correlation with the dependent variable, which could mean low 
-        impact on predictive performance or a non-linear relationship.
+     
+        Target is highly correlated with our dependent variable, Federal Funds Rate, 
+        and we expect it to have the biggest impact on predictive performance of the model. 
+        Other features have between 40% and 50% correlation with the dependent variable, which is moderate. 
+        Unemployment has a correlation of almost 0 to the dependent variable, 
+        which could mean a minimal impact on predictive performance or a non-linear relationship.
         """)
+
+# Model Info Tab
 with tabs[2]:
     st.header("Models")
     st.markdown("""
@@ -365,8 +396,10 @@ with tabs[2]:
 
     The data is first scaled using MinMaxScaler before fitting the models using Ordinary Least Squares (OLS).
     """)
+
+# Model Assumptions Tab
 with tabs[3]:
-    st.header("Model Assumptions")
+    st.header("Regression Model Assumptions")
 
     # Apply MinMaxScaler to independent variables
     scaler = MinMaxScaler()
@@ -448,8 +481,8 @@ with tabs[3]:
     ols_assumption_tests_df = pd.DataFrame(st.session_state["ols_results"]["assumption_tests"]).T.round(4)
     st.dataframe(ols_assumption_tests_df)
 
+    # Assumption Notes
     with st.expander("Regression Assumption Test Statistics and P-values Notes"):
-        # Notes
         st.markdown("""
         The assumptions of regression include:
 
@@ -459,34 +492,39 @@ with tabs[3]:
         4. Linearity
         5. No Multicollinearity
 
-
-        These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test(Homoscedasticity), Durbin-Watson test (Independence), and Rainbow test (Linearity).
-        For every model, the above p-values are all below the significance level and the Durbin Watson test statistic lies between 0 and 0.5. 
-
+        These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test (Homoscedasticity), Durbin-Watson test (Independence), and Rainbow test (Linearity).
+        We perform a simple hypothesis test for these where the hypotheses are as follows:
+        
         Null Hypothesis, H0: The model does not violate the regression assumption
 
         Alternative Hypothesis, H1: The model does violate the regression assumption
 
-        Using the 95% confidence level (significance level 0.05), the Jarque-Bera test, Breusch-Pagan test, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. 
+        Using the 95% confidence level (significance level 0.05), the Jarque-Bera, Breusch-Pagan, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. 
+        Therefore, we would reject the null hypothesis, H0, in favor of the alternative and conclude that each model violates the assumptions for these tests.
 
-        Therefore, we would reject the null hypothesis, H0, in favor of the alternative and conclude that the models violate the assumptions for these tests. 
+        For the Durbin-Watson test, any test statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence.
+        Since the Durbin Watson test statistics for every model lies between 0 and 0.5, we would reject the null hypothesis and conclude the assumption of independence has been violated for each model. 
 
-        For the Durbin-Watson test, statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence.
-
-        The models violates the first 4 regression Assumptions, which makes any metrics unreliable.             
+        All models violate the first 4 regression Assumptions. When regression assumptions are violated, any metrics become biased and unreliable.             
         """)
 
     # Display VIF table
     st.write("Variance Inflation Factors")
     st.dataframe(ols_vif_results_df)
-    st.markdown("""
-    From the VIFs, we do not have serious problems with multicollinearity except for the Output Gap in the Both Model. 
-    The best practice would to remove that from the model entirely, but since all other regression assumptions have been violated we will leave it and run the regression anyway. 
-    Unemployment, the other variable of interest from our correlation matrix analysis, has acceptable multicollinearity levels.
-    """)
 
+    # VIF Notes
+    with st.expander("VIF Notes"):
+        st.markdown("""
+        Variance Inflation Factors (VIFs) are used to test for multicollinearity. Any null values here are due to the feature not being included in the model.
+        The threshold is that VIFs below 5 have no issues. 
+        From the VIFs, we do not have serious problems with multicollinearity except for the Output Gap in the Both Model. 
+        The best practice would to remove that from the model entirely, but since all other regression assumptions have been violated we will leave it and run the regression anyway. 
+        Unemployment, the other variable of interest from our correlation matrix analysis, has acceptable multicollinearity levels.
+        """)
+
+# Model Performance Tab
 with tabs[4]:
-    st.header("Model Comparison")
+    st.header("Model Performance")
 
     # Print Table of Error metrics for all OLS models
     st.subheader("OLS Model Metrics")
@@ -502,7 +540,7 @@ with tabs[4]:
         We, on the other hand, found that the Taylor model has better predictions. 
         Note that we have a different date range than Karakas, and this could mean that Karakas' model better predicts older data, but performs poorly on more recent data. 
         Overall, their model does not perform as well as the Taylor Model, having larger average errors and percentage errors. 
-        The difference, however, is not very big, which is consistent with Karakas' findings.
+        The difference, however, is small, which is consistent with Karakas' findings.
 
         All models have negative Mean Percentage Errors, and thus they all underpredict the Federal Funds Rate.
         The percentage error metrics seem to be very high. This is likely because due to our data having small values. 
@@ -547,7 +585,7 @@ with tabs[4]:
     with st.expander("Additional OLS Model Statistics Notes"):
         # Notes
         st.markdown("""
-        Generally speaking, a model with lower values for AIC and BIC would be better than a model with higher values for them. 
+        A model with lower values for AIC and BIC is better than a model with higher values for them. 
         The AIC and BIC show a similar pattern to our findings from the error metrics and R-squared, with the models listed from worst performing to best performing being:
 
         Karakas < Taylor < Unemployment < Target < Both.
@@ -558,37 +596,38 @@ with tabs[4]:
         Note that metrics are likely biased and unreliable since regression assumptions have been violated.
         """)
 
-    st.subheader("Taylor vs Karakas Metrics")
-    # Define models, initialize dictionary to store metrics and calculate metrics
-    taylor_and_karakas = ["Taylor", "Karakas"]
-    metrics = []
+    st.subheader("Validation of Models from Karakas' Paper")
+    with st.expander("Taylor and Karakas Model Metrics Comparison"):
+        # Define models, initialize dictionary to store metrics and calculate metrics
+        taylor_and_karakas = ["Taylor", "Karakas"]
+        metrics = []
         
-    for model in taylor_and_karakas:
-        rs = find_resid_sum(y, st.session_state["ols_results"]["predictions"][model])
-        sae = find_sae(y, st.session_state["ols_results"]["predictions"][model])
-        metrics.append({"Model": model, "Sum of Residuals": rs, "Sum of Absolute Errors": round(sae, 4)})
-        
-    # Convert metrics to a DataFrame
-    metrics_df = pd.DataFrame(metrics)
-        
-    # Display metrics as a table
-    st.dataframe(metrics_df)
+        for model in taylor_and_karakas:
+            rs = find_resid_sum(y, st.session_state["ols_results"]["predictions"][model])
+            sae = find_sae(y, st.session_state["ols_results"]["predictions"][model])
+            metrics.append({"Model": model, "Sum of Residuals": rs, "Sum of Absolute Errors": round(sae, 4)})
+            
+        # Convert metrics to a DataFrame
+        metrics_df = pd.DataFrame(metrics)
+            
+        # Display metrics as a table
+        st.dataframe(metrics_df)
     
-    with st.expander("Taylor vs Karakas Metrics Notes"):
         # Notes
         st.markdown("""
         We got much smaller Sum of Residuals than Karakas did and obtained larger Sum of Absolute Errors for both models. 
         Additionally, we received lower values for each in the Taylor Model than the Karakas Model.  
 
-        That being said, both metrics for each model are very close to each other, 
-        which implies that there isn't much of a difference in performance between the two models and is consistent with Karakas' findings.
+        The metrics for each model are very close to each other, 
+        which implies that there isn't much of a difference in performance between the two models and 
+        is consistent with Karakas' findings.
         """)
 
     with st.expander("Taylor vs Karakas Predictions Plot"):
         fig, ax = plt.subplots()
-        ax.plot(df.index, y, label="True Federal Funds Rate", color="royalblue")
-        ax.plot(df.index, st.session_state["ols_results"]["predictions"]["Taylor"], label="Taylor Predictions", color="red")
-        ax.plot(df.index, st.session_state["ols_results"]["predictions"]["Karakas"], label="Karakas Predictions", color="green")
+        ax.plot(df.index, y, label="True Federal Funds Rate", color="dodgerblue")
+        ax.plot(df.index, st.session_state["ols_results"]["predictions"]["Taylor"], label="Taylor Predictions", color="darkorange", linestyle="--")
+        ax.plot(df.index, st.session_state["ols_results"]["predictions"]["Karakas"], label="Karakas Predictions", color="purple", linestyle=":")
         ax.set_title("Taylor vs Karakas Predictions")
         ax.set_xlabel("Date")
         ax.set_ylabel("Federal Funds Rate")
@@ -600,13 +639,14 @@ with tabs[4]:
         where there are 2 cross overs as they switch between overpredicting or underpredicting each other.
         """)
 
+    st.subheader("Model Predictions Plot")
     # Selector for OLS Model
     ols_model = st.selectbox("Select an OLS model to visualize:", list(st.session_state["ols_results"]["predictions"].keys()))
 
     # Plot Model Predictions vs Actual
     fig, ax = plt.subplots()
-    ax.plot(df.index, y, label="True Federal Funds Rate", color="royalblue")
-    ax.plot(df.index, st.session_state["ols_results"]["predictions"][ols_model], label=f"{ols_model} Predictions", color="red")
+    ax.plot(df.index, y, label="True Federal Funds Rate", color="dodgerblue")
+    ax.plot(df.index, st.session_state["ols_results"]["predictions"][ols_model], label=f"{ols_model} Predictions", color="darkorange", linestyle="--")
     ax.set_title(f"{ols_model} vs Federal Funds Rate")
     ax.set_xlabel("Date")
     ax.set_ylabel("Federal Funds Rate")
@@ -620,14 +660,13 @@ with tabs[4]:
         Around year 2002, the model begins overpredicting for the rest of the years, except between 2005 and 2010 where it underpredicts where the actual values form a peak and around 2008 or 2009.
         The plots may not be an exact match but they look similar enough to the ones shared in Karakas' paper. 
         """)
-
+    st.markdown("""
+    The plot of predictions remains consistent with our findings from the error metrics. 
+    Adding Target and Unemployment improve model predictions, but they tend to more closely follow earlier years of the data.
+    """)
+# Neural Network Models Tab
 with tabs[5]:
-    st.header("Neural Network Modeling")
-
-    # Set random seeds for reproducibility
-    random.seed(42)
-    np.random.seed(42) 
-    tf.random.set_seed(42)
+    st.header("Neural Network Models")
 
     # Initialize dictionaries to store results
     nn_fitted_models = {}
@@ -671,7 +710,7 @@ with tabs[5]:
         
         All models have negative Mean Percentage Errors, meaning that all of the models underpredict the Federal Funds Rate.
 
-        The inclusion of both the Target and Unemployment into the Taylor Model raised the R-squared from around 0.24 to around 0.89, which is very strong performance for a model using real economic data. 
+        The inclusion of both the Target and Unemployment into the Taylor Model raised the R-squared from around 0.24 to around 0.89, which is very strong performance for a model that uses economic data. 
         However, there is not much of a difference between the performance of the Target Model and the Both Model in average errors or R-squared. 
         On the other hand, the MPE and MAPE have differences of around 27% to 40%. These values are likely high due to our data having small values. 
         Average error metrics would be better for analysis. 
@@ -679,55 +718,67 @@ with tabs[5]:
         Adding Unemployment to the Taylor Model alone reduces errors and explains more variance but increases percentage errors. Unemployment contributes little when added with the Target. 
         """)
     
+    st.subheader("Neural Network Prediction Plots")
     # Selector for model names
     nn_model = st.selectbox("Select a NN model to visualize:", list(st.session_state["nn_predictions"].keys()))
 
     # Plot the Model Predictions vs Federal Funds Rate
     fig3, ax3 = plt.subplots()
-    ax3.plot(df.index, y, label="True Federal Funds Rate", color="royalblue")
-    ax3.plot(df.index, st.session_state["nn_predictions"][nn_model], label=f"{nn_model} Predictions", color="red")
+    ax3.plot(df.index, y, label="True Federal Funds Rate", color="dodgerblue")
+    ax3.plot(df.index, st.session_state["nn_predictions"][nn_model], label=f"{nn_model} Predictions", color="darkorange", linestyle="--")
     ax3.set_title(f"{nn_model} vs Federal Funds Rate")
     ax3.set_xlabel("Date")
     ax3.set_ylabel("Federal Funds Rate")
     ax3.legend()
     st.pyplot(fig3)
 
+    # Plot Notes
+    st.markdown("""
+    Each model tends to underpredict the Federal Funds Rate in the first half of the date range (around 1980 to 2000). Afterwards, the models tend to overpredict.
+
+    The Taylor, Karakas, and Unemployment Models tend to predict Federal Funds Rates of around 4. The Target and Both Models follow the true Federal Funds Rates more closely, having smaller gaps between them and their predictions. 
+    """)
+
+# Conclusion Tab
 with tabs[6]:
     st.header("Conclusion")
     st.markdown("""
     Although the results may differ due to different date ranges in our data, our models captured similar predictive patterns to those presented in Karakas' paper 
-    from our examination of the plots as well as the Sum of Residuals and Sum of Absolute Errors. 
+    in our examination of the plots as well as the Sum of Residuals and Sum of Absolute Errors. 
 
     Karakas (2023) noted that the Taylor Model (and their transformation of it) did not predict the Federal Funds Rate well and 
     mentioned their model having predictions closer to the actual Federal Funds Rate than the Taylor Model, but not by much. 
     However, our models' metrics show that it is the Taylor Model, rather than Karakas' Model that has smaller average errors and percentage errors. 
     We suspect this may be due to how the data we use contains more recent data. Also, our plot of the Taylor Model predictions does not have any predictions below 0 unlike Karakas' plot. 
-    This may be because Karakas did not handle outliers well or at all.
+    This may be because Karakas did not handle outliers well if at all.
 
     We noticed that Karakas did not mention regression assumptions in their paper when discussing their OLS models, so we decided to check them as part of the validation process.
     We found that almost all classical regression assumptions were violated, with the exception being multicollinearity. 
 
-    Karakas later created neural network models for using Taylor's Rule, getting better predictions than their OLS models. 
+    Karakas later created neural network models using Taylor's Rule as well, getting better predictions than their OLS models. 
     From our findings, the OLS models had inflated metrics due to regression assumption violations.
     Our neural network models, on the other hand, had lower performance metrics than our OLS models. 
-    Since Karakas got better results from their neural network model than their OLS model which should also have inflated metrics, 
+    Since Karakas got better results from their neural network model than their OLS model, which should also have inflated metrics, 
     their neural network is likely to have issues with overfitting given that they did not mention usage of techniques such as regularization, dropout, or early stopping like we had for our models.
 
-    This casts serious doubts on the credibility, rigor, professionalism of their work.
+    This casts serious doubts about the credibility, rigor, and professionalism of their work.
 
-    We believe that non-linear models are better suited for predicting the Federal Funds Rate given that no feature we used had a linear relationship with the Federal Funds Rate.  
+    We believe that non-linear models are better suited for predicting the Federal Funds Rate since no feature we used had a linear relationship with the Federal Funds Rate.  
     
     It is worth noting that the inclusion of Target and Unemployment to the Taylor Model, individually, did improve performance metrics in both the OLS and Neural Network Models. 
     However, the Target has a much larger effect on model performance than Unemployment and Unemployment has little effect on performance when it is alongside the Target.
 
     While performance metrics look strong for the Target Model, there is room for improvement. 
-    Some next steps would be to explore interaction terms with alongside Unemployment or taking lags of Unemployment to avoid multicollinearity issues with Output Gap. 
+    Some next steps would be to explore interaction terms with Unemployment or taking lags of Unemployment to avoid multicollinearity issues with Output Gap. 
     The addition of other features such as Global Economic Growth, Prices, Interest rates, Foreign Currency Exchange Rates, Consumer Confidence, and Business Confidence are also worth exploring.
     """)
 
+# Data Sources and References
 with tabs[7]:
     st.header("References")
     st.markdown("""
+    Data obtained from:
+
     Board of Governors of the Federal Reserve System (US). (2025). Federal Funds Effective Rate [DFF]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/DFF
 
     Board of Governors of the Federal Reserve System (US). (2025). Federal Funds Target Rate (DISCONTINUED) [DFEDTAR]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/DFEDTAR
@@ -736,8 +787,6 @@ with tabs[7]:
 
     Board of Governors of the Federal Reserve System (US). (2025). Federal Funds Target Range - Upper Limit [DFEDTARU]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/DFEDTARU
 
-    Karakas, A. D. (2023). Reevaluating the Taylor Rule with Machine Learning. ArXiv.org. https://arxiv.org/abs/2302.08323
-
     U.S. Bureau of Economic Analysis. (2025). Real Gross Domestic Product [GDPC1]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/GDPC1
 
     U.S. Bureau of Labor Statistics. (2025). Consumer Price Index for all urban consumers: All items in U.S. city average [CPIAUCSL]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/CPIAUCSL
@@ -745,4 +794,8 @@ with tabs[7]:
     U.S. Bureau of Labor Statistics. (2025). Unemployment Rate [UNRATE]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/UNRATE
 
     U.S. Congressional Budget Office. (2025). Real Potential Gross Domestic Product [GDPPOT]. Federal Reserve Bank of St. Louis. https://fred.stlouisfed.org/series/GDPPOT
+
+    Karakas' Paper:
+
+    Karakas, A. D. (2023). Reevaluating the Taylor Rule with Machine Learning. ArXiv.org. https://arxiv.org/abs/2302.08323
     """)
