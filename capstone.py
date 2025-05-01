@@ -7,13 +7,16 @@ import seaborn as sns
 import statsmodels.api as sm
 import streamlit as st
 import tensorflow as tf
+import tempfile
+import urllib.request
+import pickle
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from statsmodels.stats.diagnostic import het_breuschpagan, linear_rainbow
 from statsmodels.stats.stattools import durbin_watson, jarque_bera
 from scipy.stats.mstats import winsorize
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Input, Dropout
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping
@@ -100,6 +103,34 @@ def fit_nn_model(X, y, model_name):
     # Get predictions
     y_pred = model.predict(X).flatten()
     return model, y_pred, history
+
+
+def load_keras_model_and_history(model_url, history_url):
+    # Download and load Keras model (.keras file)
+    keras_path = tempfile.mkstemp(suffix=".keras")[1]
+    urllib.request.urlretrieve(model_url, keras_path)
+    model = load_model(keras_path)
+
+    # Download and load history (.pkl file)
+    history = None
+    try:
+        history_path = tempfile.mkstemp(suffix=".pkl")[1]
+        urllib.request.urlretrieve(history_url, history_path)
+        with open(history_path, "rb") as f:
+            history = pickle.load(f)
+    except Exception as e:
+        history = None  # In case no history is available or fails
+
+    return model, history
+
+
+def load_pickle_from_url(url):
+    import tempfile, urllib.request
+    path = tempfile.mkstemp(suffix=".pkl")[1]
+    urllib.request.urlretrieve(url, path)
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
 
 # Set random seeds for reproducibility
 random.seed(42)
@@ -668,29 +699,39 @@ with tabs[4]:
 with tabs[5]:
     st.header("Neural Network Models")
 
-    # Initialize dictionaries to store results
-    nn_fitted_models = {}
-    nn_predictions = {}
-    nn_error_metrics = {}
-    nn_history = {}
-
-    # Ensure session state is initialized
+    # Initialize session state
     if "nn_predictions" not in st.session_state:
-        # Train and save the models only once
         st.session_state["nn_fitted_models"] = {}
         st.session_state["nn_predictions"] = {}
         st.session_state["nn_error_metrics"] = {}
         st.session_state["nn_history"] = {}
 
+
         for model_name, X in model_features.items():
-            # Fit the model
-            model, y_pred, history = fit_nn_model(X, y, model_name)
-            
-            # Store predictions and metrics in session state
-            st.session_state["nn_fitted_models"] = model
-            st.session_state["nn_predictions"][model_name] = y_pred
-            st.session_state["nn_error_metrics"][model_name] = error_metrics(y, y_pred)
-            st.session_state["nn_history"] = history
+            try:
+                base_url = "https://raw.githubusercontent.com/nvpham12/Capstone-Project/main/saved_models"
+                model_url = f"{base_url}/{model_name}.keras"
+                history_url = f"{base_url}/{model_name}_history.pkl"
+                pred_url = f"{base_url}/{model_name}_predictions.pkl"
+                metrics_url = f"{base_url}/{model_name}_metrics.pkl"
+                
+                # Load model and history from GitHub
+                model, history = load_keras_model_and_history(model_url, history_url)
+                y_pred = load_pickle_from_url(pred_url)
+                metrics = load_pickle_from_url(metrics_url)
+               
+                # Get predictions
+                #y_pred = model.predict(X).flatten()
+
+                # Store results
+                st.session_state["nn_fitted_models"][model_name] = model
+                st.session_state["nn_predictions"][model_name] = y_pred
+                st.session_state["nn_error_metrics"][model_name] = metrics
+                st.session_state["nn_history"][model_name] = history
+
+            except Exception as e:
+                st.error(f"Failed to load or process model '{model_name}': {e}")
+
 
     # Error metrics for all NN models
     nn_error_metrics_df = pd.DataFrame(st.session_state["nn_error_metrics"]).T.round(4)
@@ -717,10 +758,15 @@ with tabs[5]:
 
         Adding Unemployment to the Taylor Model alone reduces errors and explains more variance but increases percentage errors. Unemployment contributes little when added with the Target. 
         """)
-    
+
     st.subheader("Neural Network Prediction Plots")
     # Selector for model names
-    nn_model = st.selectbox("Select a NN model to visualize:", list(st.session_state["nn_predictions"].keys()))
+    #nn_model = st.selectbox("Select a NN model to visualize:", list(st.session_state["nn_predictions"].keys()))
+    nn_model = st.selectbox(
+        "Select a NN model to visualize:",
+        list(st.session_state["nn_predictions"].keys()),
+        key="nn_model_selector"
+    )
 
     # Plot the Model Predictions vs Federal Funds Rate
     fig3, ax3 = plt.subplots()
