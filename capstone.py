@@ -1,5 +1,4 @@
 # Import Libraries
-import gc
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -800,5 +799,3 @@ with tabs[7]:
 
     Karakas, A. D. (2023). Reevaluating the Taylor Rule with Machine Learning. ArXiv.org. https://arxiv.org/abs/2302.08323
     """)
-
-gc.collect()  # Free up memory after everything runs
