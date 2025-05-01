@@ -7547,7 +7547,7 @@ Predicting the Federal Funds Rate benefits educators, economists, investors, fin
 <p>This project aims to first reproduce regression models predicting the Federal Funds Rate using Taylor’s Rule, a policy guideline by John Taylor from Stanford in 1993 and a modification of this used by researcher Alper D. Karakas, the equations of which are derived in Karkas’ (2023) paper, “Reevaluating the Taylor Rule with Machine Learning.”</p>
 <p>We will then attempt to construct other models by adding the Target and Unemployment Rate to the Taylor Model to see if the addition of new features can
 improve the performance of regression models in predicting the Federal Funds Effective Rate. We choose to build off the Taylor Model as this is the foundational model and Karakas (2023) found little difference in performance between this model and their model.</p>
-<p>We will also check the assumptions of regression for each model. We will also construct simple Neural Network Models for the regression equations.</p>
+<p>We will also check the assumptions of regression for each model and construct simple Neural Network Models for the regression equations.</p>
 <p>Possible stakeholders for this project include policy makers, economists, investors, and lending institutions.</p>
 </div>
 </div>
@@ -9245,16 +9245,16 @@ Independent variables: Output Gap, Inflation Gap, Target, Unemployment</code></p
 <ol>
 <li><p>Normality of residuals</p>
 </li>
-<li><p>Homoscedasticity (constant variance of residuals)</p>
+<li><p>Constant variance of residuals (Homoscedasticity)</p>
 </li>
-<li><p>Independence (autocorrelation)</p>
+<li><p>Independence of residuals (autocorrelation)</p>
 </li>
 <li><p>Linearity</p>
 </li>
 <li><p>No Multicollinearity</p>
 </li>
 </ol>
-<p>These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test(Homoscedasticity), Durbin-Watson test (Independence), and Rainbow test (Linearity). We perform a simple hypothesis test for these where the hypotheses are as follows:</p>
+<p>These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test(Homoscedasticity), Durbin-Watson test (autocorrelation), and Rainbow test (Linearity). We perform a simple hypothesis test for these where the hypotheses are as follows:</p>
 <p>Null Hypothesis, H0: The model does not violate the regression assumption</p>
 <p>Alternative Hypothesis, H1: The model does violate the regression assumption</p>
 <p>Using the 95% confidence level (significance level 0.05), the Jarque-Bera, Breusch-Pagan, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. Therefore, we would reject the null hypothesis, H0, in favor of the alternative and conclude that each model violates the assumptions for these tests.</p>
@@ -9569,8 +9569,8 @@ Karakas:
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p>We got much smaller Sum of Residuals than Karakas did and obtained larger Sum of Absolute Errors for both models. Additionally, we received lower values for each in the Taylor Model than the Karakas Model.</p>
-<p>Both metrics for each model are very close to each other, which implies that there isn't much of a difference in performance between the two models and is consistent with Karakas' findings.</p>
+<p>We got much smaller Sum of Residuals than Karakas did and obtained larger Sum of Absolute Errors for both models. Additionally, we received lower values for the Sum of Absolute Errors in the Taylor Model than the Karakas Model. While the Karakas Model has smaller Sum of Residuals.</p>
+<p>Both metrics for each model are very close to each other and there is little difference in performance.</p>
 </div>
 </div>
 </div>
@@ -9973,11 +9973,11 @@ Note that metrics are likely biased and unreliable since regression assumptions 
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre><span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 499us/step
-<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 533us/step
-<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 518us/step
-<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 489us/step
-<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 501us/step
+<pre><span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 491us/step
+<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 482us/step
+<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 494us/step
+<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 506us/step
+<span class="ansi-bold">480/480</span> <span class="ansi-green-fg">━━━━━━━━━━━━━━━━━━━━</span> <span class="ansi-bold">0s</span> 520us/step
 </pre>
 </div>
 </div>
