@@ -163,14 +163,14 @@ tabs = st.tabs(["Data Cleaning", "Data Exploration", "Models", "Regression Assum
 
 # Define a dictionary with datasets and their URLs
 datasets = {
-    "ffer": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/FFER.csv",
-    "pgdp": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/PGDP.csv",
-    "rgdp": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/RGDP.csv",
-    "cpi": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/CPI.csv",
-    "fftr_lower": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/FFTR_lower.csv",
-    "fftr_upper": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/FFTR_upper.csv",
-    "fftr_old": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/FFTR_old.csv",
-    "unrate": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/UNRATE.csv"
+    "ffer": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/FFER.csv",
+    "pgdp": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/PGDP.csv",
+    "rgdp": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/RGDP.csv",
+    "cpi": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/CPI.csv",
+    "fftr_lower": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/FFTR_lower.csv",
+    "fftr_upper": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/FFTR_upper.csv",
+    "fftr_old": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/FFTR_old.csv",
+    "unrate": "https://raw.githubusercontent.com/nvpham12/Capstone-Project/refs/heads/main/data/UNRATE.csv"
 }
 
 # Data Cleaning Tab
@@ -360,7 +360,10 @@ with tabs[1]:
         st.pyplot(fig)
         
         # Notes
-        st.markdown("None of the distributions are normal. Some are skewed and others are multimodal.")
+        st.markdown("""
+        Some of the features are skewed. In this case, applying transformations to the data in order to deal with skew would usually be appropriate. "
+        As Karakas makes no mention of applying transformations in their paper, this project will not apply  transformations to the data.
+        """)
 
     st.subheader("Correlation Heatmap")
     with st.expander("Correlation Heatmap and Analysis"):
@@ -398,7 +401,7 @@ with tabs[1]:
 with tabs[2]:
     st.header("Models")
     st.markdown("""
-    The variables used for each Regression Model are listed as follows:
+    The sets of variables for each regression model are listed as follows:
 
     Taylor Rule Model:
 
@@ -508,24 +511,24 @@ with tabs[3]:
     ols_vif_results_df = ols_vif_results_df[["Taylor", "Karakas", "Target", "Unemployment", "Both"]]
 
     st.write("Test Statistics and P-values for Regression Assumptions")
-    # Display assumption tests
-    ols_assumption_tests_df = pd.DataFrame(st.session_state["ols_results"]["assumption_tests"]).T.round(4)
-    st.dataframe(ols_assumption_tests_df)
 
-    # Assumption Notes
-    with st.expander("Regression Assumption Test Statistics and P-values Notes"):
+    with st.expander("Regression Assumptions"):
         st.markdown("""
         The assumptions of regression include:
 
-        1. Normality of residuals
-        2. Homoscedasticity (constant variance of residuals)
-        3. Independence (autocorrelation)
-        4. Linearity
-        5. No Multicollinearity
+        1.	Normality of residuals
 
-        These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test (Homoscedasticity), Durbin-Watson test (Independence), and Rainbow test (Linearity).
-        We perform a simple hypothesis test for these where the hypotheses are as follows:
-        
+        3.	Constant variance of residuals (Homoscedasticity)
+
+        5.	Independence of residuals (autocorrelation)
+
+        7.	Linearity
+
+        9.	No Multicollinearity
+
+        These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test (Homoscedasticity), Durbin-Watson test (autocorrelation), Rainbow test (Linearity), 
+        and Variance Inflation Factors (multicollinearity). We perform a simple hypothesis test for these where the hypotheses are as follows:
+
         Null Hypothesis, H0: The model does not violate the regression assumption
 
         Alternative Hypothesis, H1: The model does violate the regression assumption
@@ -533,10 +536,18 @@ with tabs[3]:
         Using the 95% confidence level (significance level 0.05), the Jarque-Bera, Breusch-Pagan, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. 
         Therefore, we would reject the null hypothesis, H0, in favor of the alternative and conclude that each model violates the assumptions for these tests.
 
-        For the Durbin-Watson test, any test statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence.
-        Since the Durbin Watson test statistics for every model lies between 0 and 0.5, we would reject the null hypothesis and conclude the assumption of independence has been violated for each model. 
+        For the Durbin-Watson test, any test statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence. 
+        Since the Durbin Watson test statistics for every model lie between 0 and 0.5, we would reject the null hypothesis and conclude the assumption of independence has been violated for each model.
+        """)
+    
+    # Display assumption tests
+    ols_assumption_tests_df = pd.DataFrame(st.session_state["ols_results"]["assumption_tests"]).T.round(4)
+    st.dataframe(ols_assumption_tests_df)
 
-        All models violate the first 4 regression Assumptions. When regression assumptions are violated, any metrics become biased and unreliable.             
+    # Assumption Notes
+    with st.expander("Regression Assumption Test Notes"):
+        st.markdown("""
+        All models violate the first 4 regression Assumptions. When regression assumptions are violated any metrics become biased and unreliable.         
         """)
 
     # Display VIF table
@@ -546,10 +557,9 @@ with tabs[3]:
     # VIF Notes
     with st.expander("VIF Notes"):
         st.markdown("""
-        Variance Inflation Factors (VIFs) are used to test for multicollinearity. Any null values here are due to the feature not being included in the model.
-        The threshold is that VIFs below 5 have no issues. 
+        Any null values in the VIF table are due to the feature not being included in the model. The threshold is that VIFs below 5 have no issues. 
         From the VIFs, we do not have serious problems with multicollinearity except for the Output Gap in the Both Model. 
-        The best practice would to remove that from the model entirely, but since all other regression assumptions have been violated we will leave it and run the regression anyway. 
+        The best practice would be to remove that from the model entirely, but since all other regression assumptions have been violated we will leave it and run the regression anyway. 
         Unemployment, the other variable of interest from our correlation matrix analysis, has acceptable multicollinearity levels.
         """)
 
@@ -789,28 +799,29 @@ with tabs[5]:
 with tabs[6]:
     st.header("Conclusion")
     st.markdown("""
-    Although the results may differ due to different date ranges in our data, our models captured similar predictive patterns to those presented in Karakas' paper 
-    in our examination of the plots as well as the Sum of Residuals and Sum of Absolute Errors. 
+    Although the results may differ due to different date ranges in the data, the models in this project captured similar predictive patterns to those presented in Karakas' paper from 
+    examination of the plots as well as the Sum of Residuals and Sum of Absolute Errors.
 
-    Karakas (2023) noted that the Taylor Model (and their transformation of it) did not predict the Federal Funds Rate well and 
-    mentioned their model having predictions closer to the actual Federal Funds Rate than the Taylor Model, but not by much. 
-    However, our models' metrics show that it is the Taylor Model, rather than Karakas' Model that has smaller average errors and percentage errors. 
-    We suspect this may be due to how the data we use contains more recent data. Also, our plot of the Taylor Model predictions does not have any predictions below 0 unlike Karakas' plot. 
-    This may be because Karakas did not handle outliers well if at all.
+    Karakas noted that the Taylor Model (and their transformation of it) did not predict the Federal Funds Rate well and mentioned their model having predictions closer to the actual 
+    Federal Funds Rate than the Taylor Model, but not by much. 
+    However, the models' metrics in this project show that it is the Taylor Model, rather than Karakas' Model that has smaller average errors and percentage errors. 
+    This is suspected to be due to how the data uses in this project contains more recent data. 
+    Also, the plot of the Taylor Model predictions does not have any predictions below 0 unlike the plot in Karakas' paper. This may be because Karakas did not process outliers well, if at all.
 
-    We noticed that Karakas did not mention regression assumptions in their paper when discussing their OLS models, so we decided to check them as part of the validation process.
-    We found that almost all classical regression assumptions were violated, with the exception being multicollinearity. 
+    Karakas did not mention regression assumptions or transformations in their paper when discussing their OLS models. 
+    These classical assumptions were checked in this project as part of the validation process. 
+    Almost all classical regression assumptions were violated, with the exception of multicollinearity. 
 
-    Karakas later created neural network models using Taylor's Rule as well, getting better predictions than their OLS models. 
-    From our findings, the OLS models had inflated metrics due to regression assumption violations.
-    Our neural network models, on the other hand, had lower performance metrics than our OLS models. 
-    Since Karakas got better results from their neural network model than their OLS model, which should also have inflated metrics, 
-    their neural network is likely to have issues with overfitting given that they did not mention usage of techniques such as regularization, dropout, or early stopping like we had for our models.
+    Karakas later created neural network models for using Taylor's Rule, getting better predictions than their OLS models. 
+    In this project, the OLS models had inflated metrics due to regression assumption violations. 
+    The neural network models, on the other hand, had lower performance metrics than our OLS models. 
+    Since Karakas got better results from their neural network model than their OLS model which should also have inflated metrics, their neural network is likely to have issues with overfitting, 
+    especially since their paper makes no mention of any techniques to counter overfitting (such as regularization, dropout, or early stopping).
 
-    This casts serious doubts about the credibility, rigor, and professionalism of their work.
+    This casts serious doubts about the credibility, rigor, and professionalism of Karakas' work.
 
-    We believe that non-linear models are better suited for predicting the Federal Funds Rate since no feature we used had a linear relationship with the Federal Funds Rate.  
-    
+    For predicting the Federal Funds Rate, non-linear models should be better suited, given that no feature we used had a linear relationship with the Federal Funds Rate.
+
     It is worth noting that the inclusion of Target and Unemployment to the Taylor Model, individually, did improve performance metrics in both the OLS and Neural Network Models. 
     However, the Target has a much larger effect on model performance than Unemployment and Unemployment has little effect on performance when it is alongside the Target.
 
