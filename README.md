@@ -32,22 +32,24 @@ The data was obtained from the Federal Reserve Economic Data (FRED) database. Th
 
 # Exploratory Data Analysis
 ## Features over time
+![plots_over_time](https://github.com/user-attachments/assets/86450d1f-1f41-45bd-851d-97654dc98a59)
 The Federal Funds Rate and Target have been steadily decreasing since the 1980s. 
 
 Inflation, Output Gap, and Unemployment have roughly remained around a constant level over time, despite having some sharp rises or drops.
 
-
 ## Distribution Plots
+![dist_plots](https://github.com/user-attachments/assets/7e97e3bf-ccd3-4131-87b6-31941ba3b8c5)
 Some of the features are skewed. In this case, applying transformations to the data in order to deal with skew would usually be appropriate. As Karakas makes no mention of applying transformations in their paper, this project will not apply  transformations to the data.
 
-
 ## Correlation Heatmap
-Inflation, Inflation Gap, and Inflation Lag are perfectly correlated to each other, while Output Gap and Output Gap Lag (%) are very strongly correlated, which is expected. We will not be trying any models that use more than 1 in each set as predictors at a time.
+![heatmap](https://github.com/user-attachments/assets/04f78afc-f01f-4529-9511-c6eac224169c)
+
+
+Inflation, Inflation Gap, and Inflation Lag are perfectly correlated to each other, while Output Gap and Output Gap Lag (%) are very strongly correlated, which is expected. There won't be any models that use more than 1 in each set as predictors at a time, so this won't be an issue.
 
 Unemployment and Output Gap are strongly correlated, so we will need to watch out for these when checking the Variance Inflation Factors (VIFs) for multicollinearity issues.
 
 Target is highly correlated with our dependent variable, Federal Funds Rate, and we expect it to have the biggest impact on predictive performance of the model. Other features generally have between 40% and 50% correlation with the dependent variable, which is moderate. Unemployment has almost 0 correlation to the dependent variable which could mean low impact on predictive performance or a non-linear relationship. 
-
 
 # Regression Modeling
 The sets of variables for each regression model are listed as follows:
@@ -87,39 +89,59 @@ The models are fitted using Ordinary Least Squares regression.
 The assumptions of regression include:
 
 1.	Normality of residuals
+2.	Constant variance of residuals (Homoscedasticity)
+3.	Independence of residuals (autocorrelation)
+4.	Linearity
+5.	No Multicollinearity
 
-3.	Constant variance of residuals (Homoscedasticity)
-
-5.	Independence of residuals (autocorrelation)
-
-7.	Linearity
-
-9.	No Multicollinearity
-
-These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test (Homoscedasticity), Durbin-Watson test (autocorrelation), Rainbow test (Linearity), and Variance Inflation Factors (multicollinearity). We perform a simple hypothesis test for these where the hypotheses are as follows:
+These assumptions can be tested using the Jarque-Bera test (Normality), Breusch-Pagan test (Homoscedasticity), Durbin-Watson test (autocorrelation), Rainbow test (Linearity), and Variance Inflation Factors (multicollinearity). A simple hypothesis test can be conducted with the null and alternative as follows:
 
 Null Hypothesis, H0: The model does not violate the regression assumption
 
 Alternative Hypothesis, H1: The model does violate the regression assumption
 
-Using the 95% confidence level (significance level 0.05), the Jarque-Bera, Breusch-Pagan, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. Therefore, we would reject the null hypothesis, H0, in favor of the alternative and conclude that each model violates the assumptions for these tests.
+Using the 95% confidence level (significance level 0.05), the Jarque-Bera, Breusch-Pagan, and Rainbow test statistics all have p-values of around 0, which is less than the significance level. Therefore, the null, H0, would be rejected in favor of the alternative; each model violates the assumptions for these tests.
 
-For the Durbin-Watson test, any test statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence. Since the Durbin Watson test statistics for every model lie between 0 and 0.5, we would reject the null hypothesis and conclude the assumption of independence has been violated for each model.
+For the Durbin-Watson test, any test statistics less than 1 or greater than 3 indicate strong autocorrelation and would violate the regression assumption of independence. Since the Durbin Watson test statistics for every model lie between 0 and 0.5, the null, H0, would be rejected in favor of the alternative; each model violates the assumptions of autocorrelation.
 
 ## Assumption Statistics
+|              |   Jarque-Bera p-value |   Breusch-Pagan p-value |   Durbin-Watson Test Statistic |   Rainbow Test p-value |
+|:-------------|----------------------:|------------------------:|-------------------------------:|-----------------------:|
+| Taylor       |                     0 |                       0 |                         0.0071 |                      0 |
+| Karakas      |                     0 |                       0 |                         0.0069 |                      0 |
+| Target       |                     0 |                       0 |                         0.0445 |                      0 |
+| Unemployment |                     0 |                       0 |                         0.0109 |                      0 |
+| Both         |                     0 |                       0 |                         0.0459 |                      0 |
 
 All models violate the first 4 regression Assumptions. When regression assumptions are violated any metrics become biased and unreliable.
 
 ## VIFs
+| Feature          |   Taylor |   Karakas |   Target |   Unemployment |     Both |
+|:-----------------|---------:|----------:|---------:|---------------:|---------:|
+| Inflation Gap    |   1.1778 |  nan      |   1.3848 |         1.3082 |   1.4085 |
+| Inflation Lag    | nan      |    1.0887 | nan      |       nan      | nan      |
+| Output Gap       |   1.1778 |  nan      |   1.1964 |         4.2165 |   5.5812 |
+| Output Gap Lag % | nan      |    1.0887 | nan      |       nan      | nan      |
+| Target           | nan      |  nan      |   1.2739 |       nan      |   1.702  |
+| Unemployment     | nan      |  nan      | nan      |         3.68   |   4.9166 |
+| const            |   5.9301 |    6.4245 |   5.9413 |        34.7962 |  43.7499 |
 
-Any null values in the VIF table are due to the feature not being included in the model. The threshold is that VIFs below 5 have no issues. From the VIFs, we do not have serious problems with multicollinearity except for the Output Gap in the Both Model. The best practice would be to remove that from the model entirely, but since all other regression assumptions have been violated we will leave it and run the regression anyway. Unemployment, the other variable of interest from our correlation matrix analysis, has acceptable multicollinearity levels.
+Any null values ('nan') in the VIF table are due to the feature not being included in the model. The threshold is that VIFs below 5 have no issues. From the VIFs, there aren't serious problems with multicollinearity except for the Output Gap in the Both Model. The best practice would be to remove that from the model entirely, but since all other regression assumptions have been violated, the regressions will be kept as is. Unemployment, the other variable of interest from the earlier heatmap, has acceptable multicollinearity levels.
 
 ## OLS Model Metrics
+|              |   Mean Squared Error |   Root Mean Squared Error |   Mean Absolute Error |   Mean Percentage Error |   Mean Absolute Percentage Error |   R-Squared |
+|:-------------|---------------------:|--------------------------:|----------------------:|------------------------:|---------------------------------:|------------:|
+| Taylor       |                6.217 |                     2.493 |                 1.913 |                -473.933 |                          504.281 |      0.3277 |
+| Karakas      |                6.574 |                     2.564 |                 2.022 |                -550.486 |                          579.147 |      0.2892 |
+| Target       |                0.884 |                     0.94  |                 0.605 |                 -78.489 |                          117.299 |      0.9044 |
+| Unemployment |                4.573 |                     2.138 |                 1.669 |                -416.232 |                          502.97  |      0.5056 |
+| Both         |                0.864 |                     0.93  |                 0.6   |                 -85.274 |                          119.014 |      0.9066 |
+
 The error metrics show the Taylor Model having better performance over the Karakas Model. Karakas (2023) claimed that their model had more accurate predictions, but not by much.
 
-We, on the other hand, found that the Taylor model has better predictions. Note that we have a different date range than Karakas, and this could mean that Karakas' model better predicts older data but performs poorly on more recent data. Overall, their model does not perform as well as the Taylor Model, having larger average errors and percentage errors. The difference, however, is not very big, which is consistent with Karakas' findings.
+In this project, the Taylor model has better predictions. Note that this project uses a slightly different date range than Karakas, and this could mean that Karakas' model better predicts older data but performs poorly on more recent data. Here, the Karakas model does not perform as well as the Taylor Model, having larger average errors and percentage errors. The difference, however, is not very big, which is consistent with Karakas' findings.
 
-All models have negative Mean Percentage Errors, and thus they all underpredict the Federal Funds Rate. The percentage error metrics seem to be very high. This is likely because due to our data having small values. Average error metrics would be better for analysis.
+All models have negative Mean Percentage Errors, and thus they all underpredict the Federal Funds Rate. The percentage error metrics seem to be very high. This is likely because due to the data having small numerical values. Average error metrics would be better for analysis.
 
 In terms of performance, the models from worst to best are:
 
@@ -130,39 +152,46 @@ Models with lower error metrics and higher R-squared are considered better perfo
 Adding Target or Unemployment alone to the Taylor Model increases performance, but there are marginal differences in performance when adding Unemployment alongside the Target. This suggests that Unemployment contributes little to the model, consistent with the findings from the correlation heatmap.
 Note that metrics are likely biased and unreliable since regression assumptions have been violated.
 
-## Comparison of Visuals to Paper
+## Comparison to Karakas' Paper
 ### Taylor vs FFR
+![taylor_vs_ffr](https://github.com/user-attachments/assets/1d46e186-d0d3-4828-bd8c-aef02e2505e5)
 
-Consistent with Karakas' plots, we see our Taylor Model underpredicting in year 1990, briefly overpredicting between 1990 and 1995, before underpredicting until a bit past 2000. Around the year 2002, the model begins overpredicting for the rest of the years, except between 2005 and 2010 where it underpredicts where the actual values form a peak and around 2008 or 2009. The plots may not be an exact match, but they look similar enough to the ones shared in Karakas' paper.
+Consistent with Karakas' plots, the Taylor Model underpredicts in year 1990, briefly overpredicts between 1990 and 1995, before it underpredicts until a bit past 2000. Around the year 2002, the model begins overpredicting for the rest of the years, except between 2005 and 2010 where it underpredicts where the actual values form a peak and around 2008 or 2009. The plots may not be an exact match, but they look similar enough to the ones shared in Karakas' paper.
 
 ### Taylor vs Karakas Model
+![taylor_vs_karakas](https://github.com/user-attachments/assets/0c1cc1a1-85e4-4351-9c83-9f0a6de3148d)
 
-We capture similar patterns such as the Karakas Model underpredicting more than Taylor Model between 1997 to 2001 and mostly between 2010 and 2015, where there are 2 cross overs as they switch between overpredicting or underpredicting each other.
+There are similar patterns to the visual in Karkakas' paper for this plot as well. The Karakas Model underpredicts more than Taylor Model between 1997 to 2001 and mostly between 2010 and 2015, where there are 2 cross overs as they switch between overpredicting or underpredicting each other.
 
 ## All OLS Model Prediction Plots
+![all_ols_plots](https://github.com/user-attachments/assets/450d023c-a9c5-4fb2-81a6-6445fe50276d)
 
-The plot of predictions remains consistent with our findings from the error metrics. Adding Target and Unemployment improve model predictions, but they tend to more closely follow earlier years of the data.
+The plot of predictions remains consistent with earlier findings from the metrics table. Adding Target and Unemployment improves model predictions, but they tend to more closely follow earlier years of the data.
 
 # Neural Network (NN) Modeling
 Since regression assumptions were violated, regression models are not suited for the data. Simple Neural Network models (1 hidden layer) will be used to fit each set of variables.
 
 ## NN Model Metrics
+|              |   Mean Squared Error |   Root Mean Squared Error |   Mean Absolute Error |   Mean Percentage Error |   Mean Absolute Percentage Error |   R-Squared |
+|:-------------|---------------------:|--------------------------:|----------------------:|------------------------:|---------------------------------:|------------:|
+| Taylor       |                6.978 |                     2.642 |                 2.191 |                -635.237 |                          661.376 |      0.2455 |
+| Karakas      |                7.104 |                     2.665 |                 2.168 |                -693.999 |                          715.02  |      0.2319 |
+| Target       |                1.011 |                     1.005 |                 0.613 |                 -72.375 |                          129.459 |      0.8907 |
+| Unemployment |                6.426 |                     2.535 |                 2.166 |                -696.731 |                          720.984 |      0.3051 |
+| Both         |                1.063 |                     1.031 |                 0.657 |                -118.8   |                          156.094 |      0.8851 |
 
-Our models have returned worse results for each metric compared to the OLS models. The regression assumptions being violated may have inflated the OLS model metrics. Our model performance ranking differs slightly here.
-
-We now have from worst performing to best performing:
+The models have returned worse results for each metric compared to the OLS models. The regression assumptions being violated have likely inflated the OLS model metrics. The model performance ranking differs slightly here. From worst performing to best performing:
 
 Karakas < Taylor < Unemployment < Both < Target.
 
-Like with the OLS models, we find that there is little difference in performance between the Karakas and Taylor Models.
-
-All models have negative Mean Percentage Errors, meaning that all of the models underpredict the Federal Funds Rate.
+Like with the OLS models, there is little difference in performance between the Karakas and Taylor Models. All models have negative Mean Percentage Errors, meaning that all of the models underpredict the Federal Funds Rate.
 
 The inclusion of both the Target and Unemployment into the Taylor Model raised the R-squared from around 0.24 to around 0.89, which is very strong performance for a model using real economic data. However, there is not much of a difference between the performance of the Target Model and the Both Model in average errors or R-squared. On the other hand, the MPE and MAPE have differences of around 27% to 40%. These values are likely high due to our data having small values. Average error metrics would be better for analysis.
 
 Adding Unemployment to the Taylor Model alone reduces errors and explains more variance but increases percentage errors. Unemployment contributes little when added with the Target.
 
 ## NN Prediction Plots
+![nn_pred_plots](https://github.com/user-attachments/assets/8d991399-8eb1-4cac-b307-9e15477d294b)
 
 Each model tends to underpredict the Federal Funds Rate in the first half of the date range (around 1980 to 2000). Afterwards, the models tend to overpredict.
 
@@ -171,7 +200,7 @@ The Taylor, Karakas, and Unemployment Models tend to predict Federal Funds Rates
 # Conclusion
 Although the results may differ due to different date ranges in the data, the models in this project captured similar predictive patterns to those presented in Karakas' paper from examination of the plots.
 
-Karakas noted that the Taylor Model (and their transformation of it) did not predict the Federal Funds Rate well and mentioned their model having predictions closer to the actual Federal Funds Rate than the Taylor Model, but not by much. However, the models' metrics in this project show that it is the Taylor Model, rather than Karakas' Model that has smaller average errors and percentage errors. This is suspected to be due to how the data uses in this project contains more recent data. Also, the plot of the Taylor Model predictions does not have any predictions below 0 unlike the plot in Karakas' paper. This may be because Karakas did not process outliers well, if at all.
+Karakas noted that the Taylor Model (and their transformation of it) did not predict the Federal Funds Rate well and mentioned their model having predictions closer to the actual Federal Funds Rate than the Taylor Model, but not by much. However, the models' metrics in this project show that it is the Taylor Model, rather than Karakas' Model that has smaller average errors and percentage errors. This is suspected to be due to how the data uses in this project contains more recent data. Also, the plot of the Taylor Model predictions does not have any FFR predictions below 0 unlike the plot in Karakas' paper. This may be because Karakas did not process outliers well, if at all.
 
 Karakas did not mention regression assumptions or transformations in their paper when discussing their OLS models. They were checked in this project as part of the validation process. Almost all classical regression assumptions were violated, with the exception of multicollinearity. 
 
